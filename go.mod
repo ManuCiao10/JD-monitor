@@ -4,7 +4,10 @@ go 1.19
 
 require github.com/bogdanfinn/fhttp v0.5.7
 
-require github.com/corpix/uarand v0.2.0 // indirect
+require (
+	github.com/corpix/uarand v0.2.0 // indirect
+	github.com/joho/godotenv v1.4.0 // indirect
+)
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect

@@ -2,6 +2,13 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	// "crypto/internal/edwards25519/field"
+	"encoding/json"
+	// "net/http/cookiejar"
+	// "strconv"
+	"time"
+
 	// "encoding/json"
 
 	// "encoding/json"
@@ -9,16 +16,59 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	// "net/http/cookiejar"
 	"os"
 	"strings"
 	"sync"
 
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/joho/godotenv"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	// "github.com/corpix/uarand"
 )
+
+type Author struct {
+	Name    string `json:"name"`
+	URL     string `json:"url"`
+	IconURL string `json:"icon_url"`
+}
+
+type Test struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Inline bool   `json:"inline,omitempty"`
+}
+type Thumbnail struct {
+	URL string `json:"url"`
+}
+
+type Image struct {
+	URL string `json:"url"`
+}
+
+type Footer struct {
+	Text    string `json:"text"`
+	IconURL string `json:"icon_url"`
+}
+type Embeds struct {
+	Author      Author    `json:"author"`
+	Title       string    `json:"title"`
+	URL         string    `json:"url"`
+	Description string    `json:"description"`
+	Color       int       `json:"color"`
+	Fields      []Test  `json:"fields"`
+	Thumbnail   Thumbnail `json:"thumbnail"`
+	Image       Image     `json:"image"`
+	Footer      Footer    `json:"footer"`
+}
+type Top struct {
+	Username  string   `json:"username"`
+	AvatarURL string   `json:"avatar_url"`
+	Content   string   `json:"content"`
+	Embeds    []Embeds `json:"embeds"`
+}
 
 var (
 	mu sync.Mutex
@@ -68,9 +118,89 @@ func main() {
 	// fmt.Println(url_)
 	DataObject := GetInfo(url_, client)
 	// fmt.Println(DataObject)
-	GetSize(DataObject)
+	WebHook(DataObject, client)
+	// GetSize(DataObject)
 	// log.Print("Response status: ", resp.Status)
 
+}
+
+func init() {
+	err := godotenv.Load("config/.env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
+const (
+	Image_URL = "https://cdn.discordapp.com/attachments/965899789021642752/965899835570016286/DBFF8755-874B-4436-B79A-0C02DDBBEBBA.jpg"
+)
+
+func Time() string {
+	date := time.Now().Format("15:04:05")
+	time := time.Now().UnixNano() / int64(time.Millisecond)
+	time_final := fmt.Sprintf("%s.%d", date, time%1000)
+	return time_final
+}
+
+func WebHook(dataObject string, client tls_client.HttpClient) {
+	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL_TEST")
+	test := strings.Split(dataObject, ":")
+	var fields []Test
+	for _, value := range test {
+		if strings.Contains(value, "_jdsportsde.") {
+			
+			test := value[2 : len(value)-23]
+			test2 := strings.Split(test, ",")
+			holaa := strings.TrimSpace(test2[0])
+			final := holaa[0 : len(holaa)-1]
+
+			//add fields
+			fields = append(fields, Test{
+				Name:   "Sizes",
+				Value:  final,
+				Inline: true,
+			})
+		}
+	}
+	payload := &Top{
+		Username:  "JD Monitor",
+		AvatarURL: Image_URL,
+		Content:   "",
+		Embeds: []Embeds{
+			{
+				Title: 	 "New Release",
+				Color:  16777215,
+				Fields: fields,
+				Thumbnail: Thumbnail{
+					URL: "https://cdn.discordapp.com/attachments/965899789021642752/965899835570016286/DBFF8755-874B-4436-B79A-0C02DDBBEBBA.jpg",
+				},
+				Footer: Footer{
+					IconURL: Image_URL,
+					Text:    "JD | Monitor " + Time(),
+				},
+			},
+		},
+	}
+	payloadBuf := new(bytes.Buffer)
+	_ = json.NewEncoder(payloadBuf).Encode(payload)
+
+	if webhookURL == "" {
+		fmt.Println("SET DISCORD_WEBHOOK_URL ENV VAR")
+	}
+	SendWebhook, err := http.NewRequest("POST", webhookURL, payloadBuf)
+	if err != nil {
+		fmt.Println(err)
+	}
+	SendWebhook.Header.Set("content-type", "application/json")
+
+	sendWebhookRes, err := client.Do(SendWebhook)
+	if err != nil {
+		fmt.Print(err)
+	}
+	if sendWebhookRes.StatusCode != 204 {
+		fmt.Printf("Webhook failed with status %d\n", sendWebhookRes.StatusCode)
+	}
+	defer sendWebhookRes.Body.Close()
 }
 
 func GetSize(data string) {
