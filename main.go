@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
+	// "encoding/json"
 
 	// "encoding/json"
 	"fmt"
@@ -65,18 +65,25 @@ func main() {
 	resp, _ := client.Do(req)
 	defer resp.Body.Close()
 	url_ := ParseUrl(resp.Body)
-	fmt.Println(url_)
+	// fmt.Println(url_)
 	DataObject := GetInfo(url_, client)
-	JsonParser(DataObject)
+	// fmt.Println(DataObject)
+	GetSize(DataObject)
 	// log.Print("Response status: ", resp.Status)
 
 }
 
-func JsonParser(data string) {
-	// get all the names of the products in the string
-	var dataObject map[string]interface{}
-	json.Unmarshal([]byte(data), &dataObject)
-	fmt.Println(dataObject)
+func GetSize(data string) {
+	test := strings.Split(data, ":")
+	for _, value := range test {
+		if strings.Contains(value, "_jdsportsde.") {
+			test := value[2 : len(value)-23]
+			test2 := strings.Split(test, ",")
+			holaa := strings.TrimSpace(test2[0])
+			final := holaa[0 : len(holaa)-1]
+			fmt.Println(final)
+		}
+	}
 
 }
 
@@ -94,10 +101,8 @@ func GetInfo(url string, client tls_client.HttpClient) string {
 				if attr.Key == "type" && attr.Val == "text/javascript" {
 					for tokenType := doc.Next(); tokenType != html.ErrorToken; {
 						token := doc.Token()
-						if tokenType == html.TextToken {
-							if strings.Contains(token.Data, "dataObject") {
-								return token.Data
-							}
+						if strings.Contains(token.Data, "dataObject") {
+							return token.Data
 						}
 						tokenType = doc.Next()
 					}
