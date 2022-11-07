@@ -2,6 +2,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+
+	// "encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -64,12 +67,20 @@ func main() {
 	url_ := ParseUrl(resp.Body)
 	fmt.Println(url_)
 	DataObject := GetInfo(url_, client)
-	fmt.Println(DataObject)
-	log.Print("Response status: ", resp.Status)
+	JsonParser(DataObject)
+	// log.Print("Response status: ", resp.Status)
 
 }
 
-func GetInfo(url string, client tls_client.HttpClient) string{
+func JsonParser(data string) {
+	// get all the names of the products in the string
+	var dataObject map[string]interface{}
+	json.Unmarshal([]byte(data), &dataObject)
+	fmt.Println(dataObject)
+
+}
+
+func GetInfo(url string, client tls_client.HttpClient) string {
 	url = "https://www.jdsports.de" + url
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, _ := client.Do(req)
@@ -87,7 +98,6 @@ func GetInfo(url string, client tls_client.HttpClient) string{
 							if strings.Contains(token.Data, "dataObject") {
 								return token.Data
 							}
-							// break
 						}
 						tokenType = doc.Next()
 					}
@@ -99,8 +109,8 @@ func GetInfo(url string, client tls_client.HttpClient) string{
 	return ""
 }
 
-//take the url of the first product on the page
-func ParseUrl(body io.Reader) string{
+// take the url of the first product on the page
+func ParseUrl(body io.Reader) string {
 	doc := html.NewTokenizer(body)
 	for tokenType := doc.Next(); tokenType != html.ErrorToken; {
 		token := doc.Token()
@@ -126,4 +136,6 @@ func ParseUrl(body io.Reader) string{
 2. Get the dataObject from the page
 3. Parse the dataObject to get the product name, price, color, size, etc
 4. send the data
+
+- Error handling
 */
