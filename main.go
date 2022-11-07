@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+
 	// "crypto/internal/edwards25519/field"
 	"encoding/json"
 	// "net/http/cookiejar"
@@ -16,6 +17,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+
 	// "net/http/cookiejar"
 	"os"
 	"strings"
@@ -58,7 +60,7 @@ type Embeds struct {
 	URL         string    `json:"url"`
 	Description string    `json:"description"`
 	Color       int       `json:"color"`
-	Fields      []Test  `json:"fields"`
+	Fields      []Test    `json:"fields"`
 	Thumbnail   Thumbnail `json:"thumbnail"`
 	Image       Image     `json:"image"`
 	Footer      Footer    `json:"footer"`
@@ -110,18 +112,48 @@ func main() {
 	}
 	url := "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
 	req, _ := http.NewRequest("GET", url, nil)
-	// user_agent := uarand.GetRandom()
-	// req.Header.Set("User-Agent", user_agent)// req.Heade
 	resp, _ := client.Do(req)
 	defer resp.Body.Close()
 	url_ := ParseUrl(resp.Body)
-	// fmt.Println(url_)
+	GetIMG(url_, client)
 	DataObject := GetInfo(url_, client)
-	// fmt.Println(DataObject)
-	WebHook(DataObject, client)
-	// GetSize(DataObject)
-	// log.Print("Response status: ", resp.Status)
+	
+	WebHook(DataObject, client, url_)
 
+}
+
+func GetIMG(url string, client tls_client.HttpClient) string {
+	url = "https://www.jdsports.de" + url
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+	doc := html.NewTokenizer(resp.Body)
+	for {
+		tokenType := doc.Next()
+		if tokenType == html.ErrorToken {
+			break
+		}
+		token := doc.Token()
+		if tokenType == html.StartTagToken && token.DataAtom == atom.Picture {
+			for {
+				tokenType := doc.Next()
+				if tokenType == html.ErrorToken {
+					break
+				}
+				token := doc.Token()
+				if tokenType == html.StartTagToken && token.DataAtom == atom.Source {
+					//check for <srcset> tag
+					for _, a := range token.Attr {
+						if a.Key == "srcset" {
+							test := strings.Split(a.Val, " ")
+							return test[0]
+						}
+					}
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func init() {
@@ -132,7 +164,7 @@ func init() {
 }
 
 const (
-	Image_URL = "https://cdn.discordapp.com/attachments/965899789021642752/965899835570016286/DBFF8755-874B-4436-B79A-0C02DDBBEBBA.jpg"
+	Image_URL = "https://cdn.discordapp.com/attachments/1013517214906859540/1039155134556536894/01IHswd8_400x400.jpeg"
 )
 
 func Time() string {
@@ -142,19 +174,38 @@ func Time() string {
 	return time_final
 }
 
-func WebHook(dataObject string, client tls_client.HttpClient) {
-	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL_TEST")
+func GetName(dataObject string) string {
 	test := strings.Split(dataObject, ":")
+	trim := strings.TrimSpace(test[2])
+	trim2 := strings.TrimSpace(trim[1 : len(trim)-10])
+	trim3 := strings.Split(trim2, "\"")
+	trim4 := strings.Split(trim3[0], "-")
+	return trim4[1]
+}
+
+func WebHook(dataObject string, client tls_client.HttpClient, url string) {
+	img := GetIMG(url, client)
+	fmt.Print(img)
+	url = "https://www.jdsports.de" + url
+	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL_TEST")
+	name := GetName(dataObject)
+	namehyperlink := fmt.Sprintf("[%s](%s)", name, url)
+	test := strings.Split(dataObject, ":")
+	
+
 	var fields []Test
+	fields = append(fields, Test{
+		Name:   "Price",
+		Value:  "€" + "100",
+		Inline: false,
+	})
+
 	for _, value := range test {
 		if strings.Contains(value, "_jdsportsde.") {
-			
 			test := value[2 : len(value)-23]
 			test2 := strings.Split(test, ",")
-			holaa := strings.TrimSpace(test2[0])
-			final := holaa[0 : len(holaa)-1]
-
-			//add fields
+			size := strings.TrimSpace(test2[0])
+			final := size[0 : len(size)-1]
 			fields = append(fields, Test{
 				Name:   "Sizes",
 				Value:  final,
@@ -168,11 +219,11 @@ func WebHook(dataObject string, client tls_client.HttpClient) {
 		Content:   "",
 		Embeds: []Embeds{
 			{
-				Title: 	 "New Release",
 				Color:  16777215,
+				Description: namehyperlink,
 				Fields: fields,
 				Thumbnail: Thumbnail{
-					URL: "https://cdn.discordapp.com/attachments/965899789021642752/965899835570016286/DBFF8755-874B-4436-B79A-0C02DDBBEBBA.jpg",
+					URL: img,
 				},
 				Footer: Footer{
 					IconURL: Image_URL,
@@ -273,4 +324,5 @@ func ParseUrl(body io.Reader) string {
 4. send the data
 
 - Error handling
+- Use Go routine to find all the product info
 */
