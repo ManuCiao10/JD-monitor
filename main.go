@@ -20,6 +20,22 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// ----------------------Info----------------------//
+
+type Info struct {
+	Plu           string        `json:"plu"`
+	Description   string        `json:"description"`
+	UnitPrice     string        `json:"unitPrice"`
+	Variants      []Variants    `json:"variants"`
+	ProductGroups []interface{} `json:"productGroups"`
+}
+type Variants struct {
+	Name string `json:"name"`
+	Upc  string `json:"upc"`
+}
+
+//----------------------Webhook----------------------//
+
 type Author struct {
 	Name    string `json:"name"`
 	URL     string `json:"url"`
@@ -104,8 +120,8 @@ func main() {
 	resp, _ := client.Do(req)
 	defer resp.Body.Close()
 	url_ := ParseUrl(resp.Body)
-	GetIMG(url_, client)
 	DataObject := GetInfo(url_, client)
+	fmt.Print(DataObject)
 
 	WebHook(DataObject, client, url_)
 
