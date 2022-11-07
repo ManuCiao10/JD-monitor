@@ -63,20 +63,40 @@ func main() {
 	defer resp.Body.Close()
 	url_ := ParseUrl(resp.Body)
 	fmt.Println(url_)
-	GetInfo(url_, client)
+	DataObject := GetInfo(url_, client)
+	fmt.Println(DataObject)
 	log.Print("Response status: ", resp.Status)
 
 }
 
-func GetInfo(url string, client tls_client.HttpClient) {
+func GetInfo(url string, client tls_client.HttpClient) string{
 	url = "https://www.jdsports.de" + url
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, _ := client.Do(req)
 	defer resp.Body.Close()
-	//read the body with io reader
 	doc := html.NewTokenizer(resp.Body)
-
-	fmt.Println("resp.body: ", doc)
+	//get the var dataObject from the body
+	for tokenType := doc.Next(); tokenType != html.ErrorToken; {
+		token := doc.Token()
+		if tokenType == html.StartTagToken && token.DataAtom == atom.Script {
+			for _, attr := range token.Attr {
+				if attr.Key == "type" && attr.Val == "text/javascript" {
+					for tokenType := doc.Next(); tokenType != html.ErrorToken; {
+						token := doc.Token()
+						if tokenType == html.TextToken {
+							if strings.Contains(token.Data, "dataObject") {
+								return token.Data
+							}
+							// break
+						}
+						tokenType = doc.Next()
+					}
+				}
+			}
+		}
+		tokenType = doc.Next()
+	}
+	return ""
 }
 
 //take the url of the first product on the page
@@ -101,7 +121,9 @@ func ParseUrl(body io.Reader) string{
 }
 
 /*
-1. Save the first product in a set or in the cache
-2. if the product in the html is changed
-3. then send a notification with the new product
+1. Save the first url of the page
+2. if the url is change, update new url
+2. Get the dataObject from the page
+3. Parse the dataObject to get the product name, price, color, size, etc
+4. send the data
 */
