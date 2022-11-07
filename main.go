@@ -3,9 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-
-	// "io"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -14,7 +12,8 @@ import (
 
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
-	// "github.com/corpix/uarand"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 	// "github.com/corpix/uarand"
 )
 
@@ -60,18 +59,45 @@ func main() {
 	req, _ := http.NewRequest("GET", url, nil)
 	// user_agent := uarand.GetRandom()
 	// req.Header.Set("User-Agent", user_agent)// req.Heade
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatal(err)
-	}
+	resp, _ := client.Do(req)
 	defer resp.Body.Close()
-	bodyText, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(bodyText))
+	url_ := ParseUrl(resp.Body)
+	fmt.Println(url_)
+	GetInfo(url_, client)
 	log.Print("Response status: ", resp.Status)
 
+}
+
+func GetInfo(url string, client tls_client.HttpClient) {
+	url = "https://www.jdsports.de" + url
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+	//read the body with io reader
+	doc := html.NewTokenizer(resp.Body)
+
+	fmt.Println("resp.body: ", doc)
+}
+
+//take the url of the first product on the page
+func ParseUrl(body io.Reader) string{
+	doc := html.NewTokenizer(body)
+	for tokenType := doc.Next(); tokenType != html.ErrorToken; {
+		token := doc.Token()
+		if tokenType == html.StartTagToken {
+			if token.DataAtom != atom.A {
+				tokenType = doc.Next()
+				continue
+			}
+			for _, attr := range token.Attr {
+				if strings.Contains(attr.Val, "product") {
+					return attr.Val
+				}
+			}
+		}
+		tokenType = doc.Next()
+	}
+	return ""
 }
 
 /*
