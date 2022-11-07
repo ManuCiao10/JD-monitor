@@ -3,32 +3,21 @@ package main
 import (
 	"bufio"
 	"bytes"
-
-	// "crypto/internal/edwards25519/field"
 	"encoding/json"
-	// "net/http/cookiejar"
-	// "strconv"
-	"time"
-
-	// "encoding/json"
-
-	// "encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
-
-	// "net/http/cookiejar"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
 	"github.com/joho/godotenv"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	// "github.com/corpix/uarand"
 )
 
 type Author struct {
@@ -117,7 +106,7 @@ func main() {
 	url_ := ParseUrl(resp.Body)
 	GetIMG(url_, client)
 	DataObject := GetInfo(url_, client)
-	
+
 	WebHook(DataObject, client, url_)
 
 }
@@ -185,13 +174,10 @@ func GetName(dataObject string) string {
 
 func WebHook(dataObject string, client tls_client.HttpClient, url string) {
 	img := GetIMG(url, client)
-	fmt.Print(img)
 	url = "https://www.jdsports.de" + url
 	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL_TEST")
 	name := GetName(dataObject)
 	namehyperlink := fmt.Sprintf("[%s](%s)", name, url)
-	test := strings.Split(dataObject, ":")
-	
 
 	var fields []Test
 	fields = append(fields, Test{
@@ -199,7 +185,7 @@ func WebHook(dataObject string, client tls_client.HttpClient, url string) {
 		Value:  "€" + "100",
 		Inline: false,
 	})
-
+	test := strings.Split(dataObject, ":")
 	for _, value := range test {
 		if strings.Contains(value, "_jdsportsde.") {
 			test := value[2 : len(value)-23]
@@ -219,9 +205,9 @@ func WebHook(dataObject string, client tls_client.HttpClient, url string) {
 		Content:   "",
 		Embeds: []Embeds{
 			{
-				Color:  16777215,
+				Color:       16777215,
 				Description: namehyperlink,
-				Fields: fields,
+				Fields:      fields,
 				Thumbnail: Thumbnail{
 					URL: img,
 				},
