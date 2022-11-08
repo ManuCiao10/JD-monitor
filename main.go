@@ -27,7 +27,7 @@ type Info struct {
 	Description   string        `json:"description"`
 	UnitPrice     string        `json:"unitPrice"`
 	Variants      []Variants    `json:"variants"`
-	ProductGroups []interface{} `json:"productGroups"`
+	// ProductGroups []interface{} `json:"productGroups"`
 }
 type Variants struct {
 	Name string `json:"name"`
@@ -104,6 +104,15 @@ func GetProxy() string {
 	return proxy_url
 }
 
+func SaveInfo(dataObject string) {
+	// fmt.Print(dataObject)
+	//save data to struct Info
+	var info Info
+	json.Unmarshal([]byte(dataObject), &info)
+	fmt.Println(info)
+
+}
+
 func main() {
 	options := []tls_client.HttpClientOption{
 		tls_client.WithTimeout(30),
@@ -121,7 +130,9 @@ func main() {
 	defer resp.Body.Close()
 	url_ := ParseUrl(resp.Body)
 	DataObject := GetInfo(url_, client)
-	fmt.Print(DataObject)
+	
+	//save data to struct Info
+	SaveInfo(DataObject)
 
 	WebHook(DataObject, client, url_)
 
@@ -191,7 +202,7 @@ func GetName(dataObject string) string {
 func WebHook(dataObject string, client tls_client.HttpClient, url string) {
 	img := GetIMG(url, client)
 	url = "https://www.jdsports.de" + url
-	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL_TEST")
+	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL")
 	name := GetName(dataObject)
 	namehyperlink := fmt.Sprintf("[%s](%s)", name, url)
 
@@ -326,5 +337,6 @@ func ParseUrl(body io.Reader) string {
 4. send the data
 
 - Error handling
+- Save porduct info in struct
 - Use Go routine to find all the product info
 */
