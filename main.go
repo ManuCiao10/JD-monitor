@@ -23,10 +23,10 @@ import (
 // ----------------------Info----------------------//
 
 type Info struct {
-	Plu           string        `json:"plu"`
-	Description   string        `json:"description"`
-	UnitPrice     string        `json:"unitPrice"`
-	Variants      []Variants    `json:"variants"`
+	Plu         string     `json:"plu"`
+	Description string     `json:"description"`
+	UnitPrice   string     `json:"unitPrice"`
+	Variants    []Variants `json:"variants"`
 	// ProductGroups []interface{} `json:"productGroups"`
 }
 type Variants struct {
@@ -104,14 +104,49 @@ func GetProxy() string {
 	return proxy_url
 }
 
-func SaveInfo(dataObject string) {
-	// fmt.Print(dataObject)
-	//save data to struct Info
-	var info Info
-	json.Unmarshal([]byte(dataObject), &info)
-	fmt.Println(info)
+// func SaveInfo(dataObject string) {
+// 	//remove last character
+// 	dataObject = dataObject[:len(dataObject)-2]
+// 	//remove first character
+// 	dataObject = dataObject[30:]
+// 	//add missing quotes
+// 	dataObject = strings.ReplaceAll(dataObject, "plu", "\"plu\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "description", "\"description\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "unitPrice", "\"unitPrice\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "variants", "\"variants\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "name", "\"name\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "upc", "\"upc\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "platform", "\"platform\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "pageName", "\"pageName\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "pageType", "\"pageType\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Page Title", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Page Type", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Product Name", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Product Price", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Product Code", "")
+// 	//is on sale? true/false
+// 	dataObject = strings.ReplaceAll(dataObject, "//is on sale? true/false", "")
 
-}
+// 	fmt.Println(dataObject)
+
+// 	//JSON Formatter & Validator
+// 	var prettyJSON bytes.Buffer
+// 	err := json.Indent(&prettyJSON, []byte(dataObject), "", "\t")
+// 	if err != nil {
+// 		log.Println("JSON parse error: ", err)
+// 		return
+// 	}
+
+
+// 	//save data to struct Info
+// 	var info []Info
+// 	_ = json.Unmarshal(prettyJSON.Bytes(), &info)
+// 	// if err != nil {
+// 	// 	fmt.Println("JSON unmarshal error: ", err)
+// 	// 	continue
+// 	// }
+// 	fmt.Println(info)
+// }
 
 func main() {
 	options := []tls_client.HttpClientOption{
@@ -130,9 +165,10 @@ func main() {
 	defer resp.Body.Close()
 	url_ := ParseUrl(resp.Body)
 	DataObject := GetInfo(url_, client)
+	//add monitoring if the url is the save for LOOOPP
+
 	
-	//save data to struct Info
-	SaveInfo(DataObject)
+	// SaveInfo(DataObject) //save data to struct Info
 
 	WebHook(DataObject, client, url_)
 
