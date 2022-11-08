@@ -15,10 +15,10 @@ import (
 
 	http "github.com/bogdanfinn/fhttp"
 	tls_client "github.com/bogdanfinn/tls-client"
+	"github.com/gocolly/colly/v2"
 	"github.com/joho/godotenv"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
-	// "github.com/gocolly/colly/v2"
 )
 
 // ----------------------Info----------------------//
@@ -79,9 +79,9 @@ type Top struct {
 }
 
 var (
-	mu         sync.Mutex
-	URL        = "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
-	Image_URL  = "https://cdn.discordapp.com/attachments/1013517214906859540/1039155134556536894/01IHswd8_400x400.jpeg"
+	mu        sync.Mutex
+	URL       = "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
+	Image_URL = "https://cdn.discordapp.com/attachments/1013517214906859540/1039155134556536894/01IHswd8_400x400.jpeg"
 )
 
 func GetProxy() string {
@@ -204,7 +204,7 @@ func GetIMG(url string, client tls_client.HttpClient) string {
 func init() {
 	err := godotenv.Load("config/.env")
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Print("Please create a .env file in the config folder")
 	}
 }
 
@@ -225,6 +225,14 @@ func GetName(dataObject string) string {
 }
 
 func GetPrice(dataObject string) string {
+	//Get price with http://go-colly.org/
+	// c := colly.NewCollector()
+	// var price string
+	// c.OnHTML("span[class=price]", func(e *colly.HTMLElement) {
+	// 	price = e.Text
+	// })
+	// c.Visit(URL)
+	// return price
 	test := strings.Split(dataObject, ":")
 	for i := 0; i < len(test); i++ {
 		if strings.Contains(test[i], "Product Price") {
@@ -248,7 +256,7 @@ func WebHook(dataObject string, client tls_client.HttpClient, url string) {
 	var fields []Test
 	fields = append(fields, Test{
 		Name:   "Price",
-		Value:  "€" + price,
+		Value:  "€ " + price,
 		Inline: false,
 	})
 	test := strings.Split(dataObject, ":")
@@ -369,11 +377,9 @@ func ParseUrl(body io.Reader) string {
 }
 
 /*
-- Get the price of the product
-- Error handling
 - Add colly to find the url etc..
+- clean up code
 */
-
 
 // func SaveInfo(dataObject string) {
 // 	//remove last character
@@ -404,7 +410,7 @@ func ParseUrl(body io.Reader) string {
 // 	var prettyJSON bytes.Buffer
 // 	err := json.Indent(&prettyJSON, []byte(dataObject), "", "\t")
 // 	if err != nil {
-// 		log.Println("JSON parse error: ", err)
+// 		fmt.Println("JSON parse error: ", err)
 // 		return
 // 	}
 
