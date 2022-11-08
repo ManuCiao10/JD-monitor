@@ -79,15 +79,16 @@ type Top struct {
 }
 
 var (
-	mu  sync.Mutex
-	URL string = "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
+	mu         sync.Mutex
+	URL        = "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
+	Image_URL  = "https://cdn.discordapp.com/attachments/1013517214906859540/1039155134556536894/01IHswd8_400x400.jpeg"
 )
 
 func GetProxy() string {
 	mu.Lock()
 	file, err := os.Open("proxies.txt")
 	if err != nil {
-		log.Fatalf("failed opening file: %s", err)
+		fmt.Printf("failed opening file: %s", err)
 	}
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
@@ -105,49 +106,6 @@ func GetProxy() string {
 	proxy_url := "http://" + proxy[2] + ":" + proxy[3] + "@" + proxy[0] + ":" + proxy[1]
 	return proxy_url
 }
-
-// func SaveInfo(dataObject string) {
-// 	//remove last character
-// 	dataObject = dataObject[:len(dataObject)-2]
-// 	//remove first character
-// 	dataObject = dataObject[30:]
-// 	//add missing quotes
-// 	dataObject = strings.ReplaceAll(dataObject, "plu", "\"plu\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "description", "\"description\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "unitPrice", "\"unitPrice\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "variants", "\"variants\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "name", "\"name\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "upc", "\"upc\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "platform", "\"platform\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "pageName", "\"pageName\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "pageType", "\"pageType\"")
-// 	dataObject = strings.ReplaceAll(dataObject, "//Page Title", "")
-// 	dataObject = strings.ReplaceAll(dataObject, "//Page Type", "")
-// 	dataObject = strings.ReplaceAll(dataObject, "//Product Name", "")
-// 	dataObject = strings.ReplaceAll(dataObject, "//Product Price", "")
-// 	dataObject = strings.ReplaceAll(dataObject, "//Product Code", "")
-// 	//is on sale? true/false
-// 	dataObject = strings.ReplaceAll(dataObject, "//is on sale? true/false", "")
-
-// 	fmt.Println(dataObject)
-
-// 	//JSON Formatter & Validator
-// 	var prettyJSON bytes.Buffer
-// 	err := json.Indent(&prettyJSON, []byte(dataObject), "", "\t")
-// 	if err != nil {
-// 		log.Println("JSON parse error: ", err)
-// 		return
-// 	}
-
-// 	//save data to struct Info
-// 	var info []Info
-// 	_ = json.Unmarshal(prettyJSON.Bytes(), &info)
-// 	// if err != nil {
-// 	// 	fmt.Println("JSON unmarshal error: ", err)
-// 	// 	continue
-// 	// }
-// 	fmt.Println(info)
-// }
 
 func main() {
 	options := []tls_client.HttpClientOption{
@@ -194,7 +152,7 @@ func Monitor(body io.Reader) {
 		fmt.Println(FIRST_URL)
 		URL_TMP := ParseUrl(bytes.NewReader(body))
 		fmt.Println(URL_TMP)
-		if (FIRST_URL != URL_TMP) && (URL_TMP != "") {
+		if (FIRST_URL != URL_TMP) || (URL_TMP != "") {
 			fmt.Println("URL changed")
 			//save new url
 			FIRST_URL = URL_TMP
@@ -204,10 +162,8 @@ func Monitor(body io.Reader) {
 			}
 			//send webhook
 			WebHook(DataObject, client, FIRST_URL)
-		} else {
-			fmt.Println("URL not changed")
 		}
-		time.Sleep(10 * time.Second)
+		time.Sleep(90 * time.Second)
 	}
 }
 
@@ -252,10 +208,6 @@ func init() {
 	}
 }
 
-const (
-	Image_URL = "https://cdn.discordapp.com/attachments/1013517214906859540/1039155134556536894/01IHswd8_400x400.jpeg"
-)
-
 func Time() string {
 	date := time.Now().Format("15:04:05")
 	time := time.Now().UnixNano() / int64(time.Millisecond)
@@ -272,17 +224,31 @@ func GetName(dataObject string) string {
 	return trim4[1]
 }
 
+func GetPrice(dataObject string) string {
+	test := strings.Split(dataObject, ":")
+	for i := 0; i < len(test); i++ {
+		if strings.Contains(test[i], "Product Price") {
+			//trim the spaces
+			trim := strings.TrimSpace(test[i])
+			price := strings.Split(trim, ",")
+			price_final := price[0][1 : len(price[0])-1]
+			return price_final
+		}
+	}
+	return ""
+}
+
 func WebHook(dataObject string, client tls_client.HttpClient, url string) {
+	price := GetPrice(dataObject)
 	img := GetIMG(url, client)
 	url = "https://www.jdsports.de" + url
-	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL")
 	name := GetName(dataObject)
 	namehyperlink := fmt.Sprintf("[%s](%s)", name, url)
 
 	var fields []Test
 	fields = append(fields, Test{
 		Name:   "Price",
-		Value:  "€" + "100",
+		Value:  "€" + price,
 		Inline: false,
 	})
 	test := strings.Split(dataObject, ":")
@@ -320,7 +286,7 @@ func WebHook(dataObject string, client tls_client.HttpClient, url string) {
 	}
 	payloadBuf := new(bytes.Buffer)
 	_ = json.NewEncoder(payloadBuf).Encode(payload)
-
+	var webhookURL = os.Getenv("DISCORD_WEBHOOK_URL")
 	if webhookURL == "" {
 		fmt.Println("SET DISCORD_WEBHOOK_URL ENV VAR")
 	}
@@ -403,10 +369,51 @@ func ParseUrl(body io.Reader) string {
 }
 
 /*
-
-- get the price
-- fix check only size available
-
+- Get the price of the product
 - Error handling
 - Add colly to find the url etc..
 */
+
+
+// func SaveInfo(dataObject string) {
+// 	//remove last character
+// 	dataObject = dataObject[:len(dataObject)-2]
+// 	//remove first character
+// 	dataObject = dataObject[30:]
+// 	//add missing quotes
+// 	dataObject = strings.ReplaceAll(dataObject, "plu", "\"plu\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "description", "\"description\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "unitPrice", "\"unitPrice\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "variants", "\"variants\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "name", "\"name\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "upc", "\"upc\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "platform", "\"platform\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "pageName", "\"pageName\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "pageType", "\"pageType\"")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Page Title", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Page Type", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Product Name", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Product Price", "")
+// 	dataObject = strings.ReplaceAll(dataObject, "//Product Code", "")
+// 	//is on sale? true/false
+// 	dataObject = strings.ReplaceAll(dataObject, "//is on sale? true/false", "")
+
+// 	fmt.Println(dataObject)
+
+// 	//JSON Formatter & Validator
+// 	var prettyJSON bytes.Buffer
+// 	err := json.Indent(&prettyJSON, []byte(dataObject), "", "\t")
+// 	if err != nil {
+// 		log.Println("JSON parse error: ", err)
+// 		return
+// 	}
+
+// 	//save data to struct Info
+// 	var info []Info
+// 	_ = json.Unmarshal(prettyJSON.Bytes(), &info)
+// 	// if err != nil {
+// 	// 	fmt.Println("JSON unmarshal error: ", err)
+// 	// 	continue
+// 	// }
+// 	fmt.Println(info)
+// }
