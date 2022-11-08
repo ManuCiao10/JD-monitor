@@ -18,6 +18,7 @@ import (
 	"github.com/joho/godotenv"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
+	// "github.com/gocolly/colly/v2"
 )
 
 // ----------------------Info----------------------//
@@ -78,7 +79,8 @@ type Top struct {
 }
 
 var (
-	mu sync.Mutex
+	mu  sync.Mutex
+	url string = "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
 )
 
 func GetProxy() string {
@@ -137,7 +139,6 @@ func GetProxy() string {
 // 		return
 // 	}
 
-
 // 	//save data to struct Info
 // 	var info []Info
 // 	_ = json.Unmarshal(prettyJSON.Bytes(), &info)
@@ -157,20 +158,53 @@ func main() {
 	}
 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)
 	if err != nil {
-		log.Println("Error creating client: ", err)
+		fmt.Println("Error creating client: ", err)
 	}
-	url := "https://www.jdsports.de/campaign/Neuheiten/?facet-new=latest&sort=latest"
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, _ := client.Do(req)
 	defer resp.Body.Close()
-	url_ := ParseUrl(resp.Body)
-	DataObject := GetInfo(url_, client)
-	//add monitoring if the url is the save for LOOOPP
+	Monitor(resp.Body)
+}
 
-	
-	// SaveInfo(DataObject) //save data to struct Info
+func Monitor(body io.Reader) {
+	FIRST_URL := ParseUrl(body)
+	if FIRST_URL == "" {
+		fmt.Println("No url found")
+	}
+	fmt.Println(FIRST_URL)
+	//check if url is the same
+	//if url is different take the new url and send in the webhook
+	// url_ = "https://www.jdsports.de" + url_
+	// for {
+	// 	options := []tls_client.HttpClientOption{
+	// 		tls_client.WithTimeout(30),
+	// 		tls_client.WithClientProfile(tls_client.Chrome_105),
+	// 		tls_client.WithNotFollowRedirects(),
+	// 		tls_client.WithProxyUrl(GetProxy()),
+	// 	}
+	// 	client, err := tls_client.NewHttpClient(tls_client.NewNoopLogger(), options...)
+	// 	if err != nil {
+	// 		fmt.Println("Error creating client: ", err)
+	// 	}
+	// 	req, err := http.NewRequest("GET", url_, nil)
+	// 	if err != nil {
+	// 		fmt.Println("Error creating request: ", err)
+	// 	}
+	// 	resp, err := client.Do(req)
+	// 	if err != nil {
+	// 		fmt.Println("Error sending request: ", err)
+	// 	}
 
-	WebHook(DataObject, client, url_)
+	// 	// defer resp.Body.Close()
+	// 	body, _ := io.ReadAll(resp.Body)
+	// 	fmt.Println(string(body))
+	// 	fmt.Print(url_)
+	// 	DataObject := GetInfo(url_, client)
+	// 	// if DataObject == "" {
+	// 	// 	fmt.Println("No data found")
+	// 	// }
+	// 	WebHook(DataObject, client, url_)
+	// }
 
 }
 
@@ -373,6 +407,5 @@ func ParseUrl(body io.Reader) string {
 4. send the data
 
 - Error handling
-- Save porduct info in struct
-- Use Go routine to find all the product info
+- Add colly to find the url etc..
 */
