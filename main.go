@@ -400,11 +400,9 @@ func ParseUrl(body io.Reader) string {
 }
 
 /*
-1. Save the first url of the page
-2. if the url is change, update new url
-2. Get the dataObject from the page
-3. Parse the dataObject to get the product name, price, color, size, etc
-4. send the data
+
+- get the price
+- fix check only size available
 
 - Error handling
 - Add colly to find the url etc..
